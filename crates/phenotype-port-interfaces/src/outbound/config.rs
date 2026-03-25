@@ -3,9 +3,14 @@
 //! Configuration ports define configuration access patterns.
 
 use crate::error::Result;
-use serde::{de::DeserializeOwned, Serialize};
+use serde::de::DeserializeOwned;
 
-/// Configuration port for reading settings.
+/// Configuration port alias for common naming conventions.
+pub trait ConfigProvider: Config {}
+
+impl<T: Config> ConfigProvider for T {}
+
+/// Extension trait for config with typed accessors.
 #[async_trait::async_trait]
 pub trait Config: Send + Sync {
     /// Get a configuration value by key.

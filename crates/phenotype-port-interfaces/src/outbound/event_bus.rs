@@ -24,3 +24,16 @@ pub trait EventBus: Send + Sync {
     /// Unsubscribe from a topic.
     async fn unsubscribe(&self, topic: &str) -> Result<()>;
 }
+
+/// Extension trait for EventBus with additional helpers.
+pub trait EventBusExt: EventBus {
+    /// Publish multiple events to a topic.
+    async fn publish_all(&self, topic: &str, events: &[Self::Event]) -> Result<()> {
+        for event in events {
+            self.publish(topic, event).await?;
+        }
+        Ok(())
+    }
+}
+
+impl<T: EventBus> EventBusExt for T {}
