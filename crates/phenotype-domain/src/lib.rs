@@ -30,6 +30,7 @@
 //! │  │   Events    │  │  Services   │  │    Types        │ │
 //! │  └─────────────┘  └─────────────┘  └─────────────────┘ │
 //! └─────────────────────────────────────────────────────────┘
+<<<<<<< HEAD
 //!                              │
 //!                              │ Ports (traits, no impl)
 //!                              ▼
@@ -37,12 +38,18 @@
 //! │              APPLICATION / ADAPTERS                     │
 //! │           (phenotype-ports, phenotype-adapters)        │
 //! └─────────────────────────────────────────────────────────┘
+=======
+>>>>>>> main
 //! ```
 //!
 //! ## DDD Building Blocks
 //!
 //! | Component | Description | Example |
+<<<<<<< HEAD
 //! |-----------|-------------|---------|
+=======
+//! |-----------|-------------|---------|  
+>>>>>>> main
 //! | **Value Objects** | Immutable, equality by value | `AgentId`, `TaskStatus` |
 //! | **Entities** | Identity-based, mutable | `Agent`, `Task` |
 //! | **Aggregates** | Consistency boundary, root | `AgentAggregate` |
@@ -56,6 +63,7 @@
 //! - **Task Context** - Task management, assignment, execution
 //! - **Workflow Context** - Multi-step workflow orchestration
 //! - **Policy Context** - Governance, security, compliance
+<<<<<<< HEAD
 //!
 //! ## Design Principles Applied
 //!
@@ -74,6 +82,8 @@
 //! ## Feature Flags
 //!
 //! - `serde` - Enable serialization/deserialization
+=======
+>>>>>>> main
 
 // === Public API ===
 
@@ -84,7 +94,11 @@ pub mod aggregates;
 pub mod events;
 pub mod services;
 
+<<<<<<< HEAD
 pub use errors::{DomainError, ValidationError};
+=======
+pub use errors::{DomainError, DomainResult, ValidationError};
+>>>>>>> main
 pub use value_objects::*;
 pub use entities::*;
 pub use aggregates::*;

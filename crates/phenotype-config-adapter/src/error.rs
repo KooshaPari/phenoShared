@@ -15,6 +15,7 @@ pub enum AdapterError {
     #[error("Parse error: {0}")]
     Parse(String),
 
+<<<<<<< HEAD
     #[error("Type error: {0}")]
     Type(String),
 
@@ -26,6 +27,10 @@ pub enum AdapterError {
 
     #[error("File error: {0}")]
     File(String),
+=======
+    #[error("IO error: {0}")]
+    Io(String),
+>>>>>>> main
 
     #[error("Port error: {0}")]
     Port(#[from] PortError),

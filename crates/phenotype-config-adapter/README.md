@@ -1,5 +1,6 @@
 # Phenotype Config Adapter
 
+<<<<<<< HEAD
 A hexagonal architecture adapter implementing the `Config` port for configuration management.
 
 ## Features
@@ -8,16 +9,30 @@ A hexagonal architecture adapter implementing the `Config` port for configuratio
 - **Priority System**: Later sources override earlier ones
 - **Async/Await**: Fully async implementation using `tokio`
 - **Config Pattern**: Implements the `Config` port interface from `phenotype-port-interfaces`
+=======
+Configuration adapter implementing the `Config` port for hexagonal architecture.
+
+## Features
+
+- Multi-source configuration (env, yaml, json)
+- Async/await with `tokio`
+- Config pattern implementation
+>>>>>>> main
 
 ## Usage
 
 ```rust
+<<<<<<< HEAD
 use phenotype_config_adapter::{ConfigAdapter, GetStr, GetBool, GetUsize};
 use std::path::Path;
+=======
+use phenotype_config_adapter::{ConfigAdapter, Config};
+>>>>>>> main
 
 #[tokio::main]
 async fn main() {
     let config = ConfigAdapter::new();
+<<<<<<< HEAD
     
     // Load from environment with prefix
     config.load_env(Some("APP_")).await;
@@ -56,3 +71,8 @@ async fn main() {
 ## License
 
 MIT
+=======
+    config.load_env(None).await;
+}
+```
+>>>>>>> main

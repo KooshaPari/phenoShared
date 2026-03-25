@@ -5,13 +5,20 @@ edition = "2021"
 description = "Configuration adapter for phenotype-port-interfaces Config port"
 license = "MIT"
 authors = ["Phenotype Team"]
+<<<<<<< HEAD
 repository = "https://github.com/KooshaPari/phenotype-shared"
 documentation = "https://docs.rs/phenotype-config-adapter"
+=======
+>>>>>>> main
 readme = "README.md"
 
 [dependencies]
 # Core ports
+<<<<<<< HEAD
 phenotype-port-interfaces = { path = "../phenotype-port-interfaces", version = "0.1.0" }
+=======
+phenotype-port-interfaces = { path = "../phenotype-port-interfaces" }
+>>>>>>> main
 
 # Async
 async-trait = "0.1"
@@ -22,6 +29,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 serde_yaml = "0.9"
 
+<<<<<<< HEAD
 # Time
 chrono = { version = "0.4", features = ["serde"] }
 
@@ -34,3 +42,10 @@ tracing = "0.1"
 [dev-dependencies]
 tokio-test = "0.4"
 tempfile = "3"
+=======
+# Error handling
+thiserror = "1"
+
+[dev-dependencies]
+tokio-test = "0.4"
+>>>>>>> main
