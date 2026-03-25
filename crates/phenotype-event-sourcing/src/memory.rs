@@ -106,7 +106,7 @@ impl EventStore for InMemoryEventStore {
             hash,
             prev_hash,
             payload_json,
-            event_type: event_type.to_string(),
+            _event_type: event_type.to_string(),
             actor: event.actor.clone(),
             timestamp: event.timestamp,
             id: event.id,
