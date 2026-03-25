@@ -43,7 +43,7 @@ impl<T> Paginated<T> {
     }
 
     pub fn total_pages(&self) -> u32 {
-        (self.total + self.page_size as u64 - 1) / self.page_size as u64
+        ((self.total + self.page_size as u64 - 1) / self.page_size as u64) as u32
     }
 
     pub fn has_next(&self) -> bool {

@@ -86,3 +86,6 @@ impl From<u64> for U64Id {
         Self(id)
     }
 }
+
+/// UUID-based identifier - alias for StringId with UUID semantics.
+pub type UuidIdentifier = StringId;

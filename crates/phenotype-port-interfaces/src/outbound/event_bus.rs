@@ -24,28 +24,3 @@ pub trait EventBus: Send + Sync {
     /// Unsubscribe from a topic.
     async fn unsubscribe(&self, topic: &str) -> Result<()>;
 }
-
-/// Extension trait for event bus with typed subscribers.
-pub trait EventBusExt: EventBus {
-    /// Subscribe with a typed handler.
-    fn subscribe_typed<F, Fut>(&self, topic: &str, handler: F) -> Result<()>
-    where
-        F: Fn(Self::Event) -> Fut + Send + Sync + 'static,
-        Fut: std::future::Future<Output = Result<()>> + Send + 'static;
-}
-
-impl<T: EventBus> EventBusExt for T {
-    fn subscribe_typed<F, Fut>(&self, topic: &str, handler: F) -> Result<()>
-    where
-        F: Fn(Self::Event) -> Fut + Send + Sync + 'static,
-        Fut: std::future::Future<Output = Result<()>> + Send + 'static,
-    {
-        let handler = Box::new(move |event| {
-            let fut = handler(event.clone());
-            Box::pin(async move { fut.await })
-        });
-        // Cannot easily forward due to async closure limitations
-        // This is a marker for implementation
-        Ok(())
-    }
-}

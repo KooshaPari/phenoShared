@@ -3,25 +3,24 @@
 //! Convenient re-exports for common use cases.
 
 pub use crate::domain::{
-    Entity, EntityExt, ValueObject, ValueObjectExt,
-    DomainEvent, DomainEventExt, EventEnvelope,
-    Aggregate, AggregateExt,
-    Identifier, StringId, U64Id,
+    Entity, ValueObject, ValueObjectExt,
+    DomainEvent, EventMetadata,
+    AggregateRoot, Aggregate,
+    Identifier, StringId, U64Id, UuidIdentifier,
 };
 pub use crate::outbound::{
-    Repository, RepositoryExt, StorableEntity,
+    Repository, RepositoryExt,
     Cache, CacheExt,
     Queue, EventQueue, Message,
-    EventBus, EventBusExt,
-    Config, ConfigExt,
-    Logger, LoggerExt, LogLevel, LogRecord,
-    HttpClient, HttpMethod, HttpRequest, HttpResponse,
+    EventBus, EventHandler,
+    ConfigProvider,
+    Logger,
+    HttpClient, HttpRequest, HttpResponse, HttpMethod,
     FileSystem, FileSystemExt,
 };
 pub use crate::inbound::{
     Command, CommandHandler, CommandBus, CommandBusExt,
     Query, QueryHandler, QueryBus,
-    EventHandler, EventProcessor,
     Paginated,
 };
 pub use crate::error::{PortError, Result};

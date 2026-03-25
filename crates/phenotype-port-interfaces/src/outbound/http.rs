@@ -3,7 +3,7 @@
 //! HTTP ports define HTTP client operations.
 
 use crate::error::Result;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 /// HTTP method.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -74,7 +74,7 @@ pub trait HttpClient: Send + Sync {
     }
 
     /// Send a POST request with JSON body.
-    async fn post_json<T: Serialize>(&self, url: &str, body: &T) -> Result<HttpResponse> {
+    async fn post_json<T: Serialize + std::marker::Sync>(&self, url: &str, body: &T) -> Result<HttpResponse> {
         let request = HttpRequest::new(HttpMethod::Post, url).with_json_body(body)?;
         self.send(request).await
     }

@@ -17,29 +17,15 @@ pub trait ValueObject: 'static + Send + Sync + Clone + PartialEq {
 /// Extension trait for value objects with validation.
 pub trait ValueObjectExt: ValueObject {
     /// Validates the value, returning an error message if invalid.
-    fn validate(value: &Self::Value) -> crate::error::Result<()> {
-        let _ = value;
+    fn validate(_value: &Self::Value) -> crate::error::Result<()> {
         Ok(())
     }
 
     /// Creates a new value object, returning an error if invalid.
     fn new(value: Self::Value) -> crate::error::Result<Self>
     where
-        Self: Sized,
-    {
-        Self::validate(&value)?;
-        Self::new_unchecked(value)
-    }
+        Self: Sized;
 
     /// Creates a new value object without validation.
     fn new_unchecked(value: Self::Value) -> Self;
-}
-
-impl<T: ValueObject> ValueObjectExt for T {
-    fn new_unchecked(value: Self::Value) -> Self {
-        panic!(
-            "ValueObject::new_unchecked must be implemented for {}",
-            std::any::type_name::<T>()
-        )
-    }
 }

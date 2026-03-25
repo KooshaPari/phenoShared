@@ -15,4 +15,7 @@ pub use entity::*;
 pub use value_object::*;
 pub use event::*;
 pub use aggregate::*;
-pub use identifier::*;
+
+// Re-export commonly used aliases
+pub use aggregate::Aggregate as AggregateRoot;
+pub use identifier::UuidIdentifier;
