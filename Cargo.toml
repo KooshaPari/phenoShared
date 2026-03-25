@@ -1,11 +1,16 @@
 [workspace]
 resolver = "2"
 members = [
+    "crates/phenotype-domain",
     "crates/phenotype-event-sourcing",
     "crates/phenotype-cache-adapter",
     "crates/phenotype-policy-engine",
     "crates/phenotype-state-machine",
     "crates/phenotype-port-interfaces",
+    "crates/phenotype-postgres-adapter",
+    "crates/phenotype-redis-adapter",
+    "crates/phenotype-http-adapter",
+    "crates/phenotype-application",
 ]
 
 [workspace.package]
@@ -28,3 +33,10 @@ moka = { version = "0.12", features = ["sync", "future"] }
 toml = "0.8"
 regex = "1.11"
 uuid = { version = "1.11", features = ["v4", "serde"] }
+tokio = { version = "1.40", features = ["full"] }
+tokio-test = "0.4"
+validator = { version = "0.18", features = ["derive"] }
+anyhow = "1.0"
+tracing = "0.1"
+tracing-opentelemetry = "0.24"
+mockall = "0.13"
