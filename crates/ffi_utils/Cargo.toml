@@ -1,0 +1,9 @@
+[package]
+name = "ffi_utils"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+parking_lot = "0.12"
+once_cell = "1.18"
+regex = "1.11"
