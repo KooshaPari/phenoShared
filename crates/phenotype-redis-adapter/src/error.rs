@@ -1,25 +1,31 @@
 //! # Error Types
 
-use thiserror::Error;
-
 /// Error type for Redis adapter operations.
-#[derive(Error, Debug)]
+#[derive(Debug)]
 pub enum RedisError {
-    #[error("Connection error: {0}")]
-    ConnectionError(String),
-
-    #[error("Query error: {0}")]
-    QueryError(String),
-
-    #[error("Not found: {0}")]
+    Connection(String),
+    Query(String),
     NotFound(String),
-
-    #[error("Serialization error: {0}")]
-    SerializationError(#[from] serde_json::Error),
-
-    #[error("Pool error: {0}")]
-    PoolError(String),
+    Serialization(String),
+    Pool(String),
 }
 
-/// Result type alias for Redis adapter operations.
-pub type Result<T> = std::result::Result<T, RedisError>;
+impl std::fmt::Display for RedisError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RedisError::Connection(msg) => write!(f, "Connection error: {}", msg),
+            RedisError::Query(msg) => write!(f, "Query error: {}", msg),
+            RedisError::NotFound(msg) => write!(f, "Not found: {}", msg),
+            RedisError::Serialization(msg) => write!(f, "Serialization error: {}", msg),
+            RedisError::Pool(msg) => write!(f, "Pool error: {}", msg),
+        }
+    }
+}
+
+impl std::error::Error for RedisError {}
+
+impl From<serde_json::Error> for RedisError {
+    fn from(e: serde_json::Error) -> Self {
+        RedisError::Serialization(e.to_string())
+    }
+}

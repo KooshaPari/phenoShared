@@ -1,0 +1,45 @@
+[package]
+name = "phenotype-application"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Phenotype Application Layer - CQRS commands, queries, and use case handlers"
+documentation = "https://docs.phenotype.chat/xdd/application"
+homepage = "https://phenotype.chat"
+repository.workspace = true
+
+[dependencies]
+# Domain layer (core business logic, zero external deps)
+phenotype-domain = { path = "../phenotype-domain" }
+
+# Ports (interfaces to infrastructure)
+phenotype-port-interfaces = { path = "../phenotype-port-interfaces" }
+
+# Event sourcing (for event-sourced aggregates)
+# NOTE: phenotype-event-sourcing has pre-existing compilation errors
+# phenotype-event-sourcing = { path = "../phenotype-event-sourcing" }
+
+# Serialization for DTOs
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Async runtime
+tokio = { workspace = true, features = ["full"] }
+
+# Error handling
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+
+# Tracing/observability
+tracing = { workspace = true }
+tracing-opentelemetry = { workspace = true }
+
+# Validation
+validator = { workspace = true }
+
+# Time and ID generation
+chrono = { workspace = true }
+uuid = { workspace = true, features = ["v4"] }
+
+[dev-dependencies]
+# Add test dependencies here as needed

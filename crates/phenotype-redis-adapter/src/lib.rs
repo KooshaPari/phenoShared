@@ -1,19 +1,12 @@
 //! # Phenotype Redis Adapter
 //!
-//! Redis adapter implementing the `Cache` port for hexagonal architecture.
-//!
-//! ## Features
-//!
-//! - **Connection Pooling**: Uses `deadpool-redis` for efficient connection pooling
-//! - **Async/Await**: Fully async implementation using `tokio`
-//! - **TTL Support**: Built-in expiration support
-//! - **Serialization**: JSON serialization for cached values
+//! Redis adapter for hexagonal architecture.
 
 pub mod error;
 pub mod redis_cache;
 pub mod redis_config;
 
-pub use error::{RedisError, Result};
+pub use error::RedisError;
 pub use redis_cache::RedisCache;
 pub use redis_config::RedisConfig;
 

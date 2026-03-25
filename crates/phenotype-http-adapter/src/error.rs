@@ -1,28 +1,45 @@
 //! # Error Types
 
-use thiserror::Error;
-
 /// Error type for HTTP adapter operations.
-#[derive(Error, Debug)]
+#[derive(Debug)]
 pub enum HttpError {
-    #[error("Request error: {0}")]
-    RequestError(String),
-
-    #[error("Response error: {0}")]
-    ResponseError(String),
-
-    #[error("Serialization error: {0}")]
-    SerializationError(#[from] serde_json::Error),
-
-    #[error("Timeout error: {0}")]
-    TimeoutError(String),
-
-    #[error("Network error: {0}")]
-    NetworkError(String),
-
-    #[error("Status code error: {status} - {body}")]
-    StatusError { status: u16, body: String },
+    Request(String),
+    Response(String),
+    Serialization(String),
+    Timeout(String),
+    Network(String),
+    Status { code: u16, body: String },
 }
 
-/// Result type alias for HTTP adapter operations.
-pub type Result<T> = std::result::Result<T, HttpError>;
+impl std::fmt::Display for HttpError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            HttpError::Request(msg) => write!(f, "Request error: {}", msg),
+            HttpError::Response(msg) => write!(f, "Response error: {}", msg),
+            HttpError::Serialization(msg) => write!(f, "Serialization error: {}", msg),
+            HttpError::Timeout(msg) => write!(f, "Timeout error: {}", msg),
+            HttpError::Network(msg) => write!(f, "Network error: {}", msg),
+            HttpError::Status { code, body } => write!(f, "Status {}: {}", code, body),
+        }
+    }
+}
+
+impl std::error::Error for HttpError {}
+
+impl From<reqwest::Error> for HttpError {
+    fn from(e: reqwest::Error) -> Self {
+        if e.is_timeout() {
+            HttpError::Timeout(e.to_string())
+        } else if e.is_connect() {
+            HttpError::Network(e.to_string())
+        } else {
+            HttpError::Request(e.to_string())
+        }
+    }
+}
+
+impl From<serde_json::Error> for HttpError {
+    fn from(e: serde_json::Error) -> Self {
+        HttpError::Serialization(e.to_string())
+    }
+}

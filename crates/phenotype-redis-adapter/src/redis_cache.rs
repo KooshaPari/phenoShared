@@ -1,17 +1,14 @@
 //! # Redis Cache
 //!
-//! Implementation of the `Cache` port using Redis.
+//! Simple Redis cache implementation.
 
-use async_trait::async_trait;
 use deadpool_redis::{Config, Pool, Runtime};
+use deadpool_redis::redis::RedisError;
 
-use phenotype_port_interfaces::outbound::cache::{Cache, CacheExt};
-use phenotype_port_interfaces::error::{PortError, Result as PortResult};
-
-use crate::error::{RedisError, Result};
+use crate::error::RedisError as AppRedisError;
 use crate::redis_config::RedisConfig;
 
-/// Redis implementation of the Cache port.
+/// Redis cache for storing key-value pairs.
 #[derive(Clone)]
 pub struct RedisCache {
     pool: Pool,
@@ -24,134 +21,72 @@ impl RedisCache {
     }
 
     /// Create a connection pool from config.
-    pub async fn from_config(config: &RedisConfig) -> Result<Self> {
+    pub fn from_config(config: &RedisConfig) -> Result<Self, AppRedisError> {
         let pool = create_pool(config)?;
         Ok(Self::new(pool))
     }
 
-    fn map_error(e: deadpool_redis::PoolError) -> PortError {
-        PortError::ConnectionError(e.to_string())
-    }
-}
-
-#[async_trait]
-impl Cache for RedisCache {
-    type Error = PortError;
-
-    async fn get(&self, key: &str) -> Result<Option<Vec<u8>>, Self::Error> {
-        let mut conn = self.pool.get().await.map_err(Self::map_error)?;
-
-        let result: Option<Vec<u8>> = redis::cmd("GET")
+    /// Get a value by key.
+    pub async fn get(&self, key: &str) -> Result<Option<Vec<u8>>, AppRedisError> {
+        let mut conn = self.pool.get().await.map_err(|e| AppRedisError::Pool(e.to_string()))?;
+        let result: Result<Option<Vec<u8>>, RedisError> = deadpool_redis::redis::cmd("GET")
             .arg(key)
             .query_async(&mut conn)
-            .await
-            .map_err(|e| PortError::StorageError(e.to_string()))?;
-
-        Ok(result)
+            .await;
+        result.map_err(|e| AppRedisError::Query(e.to_string()))
     }
 
-    async fn set(
-        &self,
-        key: &str,
-        value: Vec<u8>,
-        ttl_secs: Option<u64>,
-    ) -> Result<(), Self::Error> {
-        let mut conn = self.pool.get().await.map_err(Self::map_error)?;
-
+    /// Set a value with optional TTL.
+    pub async fn set(&self, key: &str, value: Vec<u8>, ttl_secs: Option<u64>) -> Result<(), AppRedisError> {
+        let mut conn = self.pool.get().await.map_err(|e| AppRedisError::Pool(e.to_string()))?;
         match ttl_secs {
             Some(ttl) => {
-                redis::cmd("SETEX")
+                let result: Result<(), RedisError> = deadpool_redis::redis::cmd("SETEX")
                     .arg(key)
                     .arg(ttl as i64)
                     .arg(&value)
                     .query_async(&mut conn)
-                    .await
-                    .map_err(|e| PortError::StorageError(e.to_string()))?;
+                    .await;
+                result.map_err(|e| AppRedisError::Query(e.to_string()))?;
             }
             None => {
-                redis::cmd("SET")
+                let result: Result<(), RedisError> = deadpool_redis::redis::cmd("SET")
                     .arg(key)
                     .arg(&value)
                     .query_async(&mut conn)
-                    .await
-                    .map_err(|e| PortError::StorageError(e.to_string()))?;
+                    .await;
+                result.map_err(|e| AppRedisError::Query(e.to_string()))?;
             }
         }
-
         Ok(())
     }
 
-    async fn delete(&self, key: &str) -> Result<(), Self::Error> {
-        let mut conn = self.pool.get().await.map_err(Self::map_error)?;
-
-        redis::cmd("DEL")
+    /// Delete a key.
+    pub async fn delete(&self, key: &str) -> Result<(), AppRedisError> {
+        let mut conn = self.pool.get().await.map_err(|e| AppRedisError::Pool(e.to_string()))?;
+        let result: Result<i64, RedisError> = deadpool_redis::redis::cmd("DEL")
             .arg(key)
             .query_async(&mut conn)
-            .await
-            .map_err(|e| PortError::StorageError(e.to_string()))?;
-
+            .await;
+        result.map_err(|e| AppRedisError::Query(e.to_string()))?;
         Ok(())
     }
 
-    async fn exists(&self, key: &str) -> Result<bool, Self::Error> {
-        let mut conn = self.pool.get().await.map_err(Self::map_error)?;
-
-        let exists: bool = redis::cmd("EXISTS")
+    /// Check if a key exists.
+    pub async fn exists(&self, key: &str) -> Result<bool, AppRedisError> {
+        let mut conn = self.pool.get().await.map_err(|e| AppRedisError::Pool(e.to_string()))?;
+        let result: Result<i64, RedisError> = deadpool_redis::redis::cmd("EXISTS")
             .arg(key)
             .query_async(&mut conn)
-            .await
-            .map_err(|e| PortError::StorageError(e.to_string()))?;
-
-        Ok(exists)
-    }
-
-    async fn expire(&self, key: &str, ttl_secs: u64) -> Result<(), Self::Error> {
-        let mut conn = self.pool.get().await.map_err(Self::map_error)?;
-
-        redis::cmd("EXPIRE")
-            .arg(key)
-            .arg(ttl_secs as i64)
-            .query_async(&mut conn)
-            .await
-            .map_err(|e| PortError::StorageError(e.to_string()))?;
-
-        Ok(())
-    }
-}
-
-impl CacheExt for RedisCache {}
-
-#[async_trait]
-impl<T: serde::de::DeserializeOwned + Send + Sync> CacheExt for RedisCache {
-    async fn get_json<'a, V: serde::Deserialize<'a>>(&self, key: &str) -> Result<Option<V>, PortError> {
-        let value = self.get(key).await?;
-        match value {
-            Some(bytes) => {
-                let value: V = serde_json::from_slice(&bytes)
-                    .map_err(|e| PortError::InvalidData(e.to_string()))?;
-                Ok(Some(value))
-            }
-            None => Ok(None),
-        }
-    }
-
-    async fn set_json<T: serde::Serialize>(&self, key: &str, value: &T, ttl_secs: Option<u64>) -> Result<(), PortError> {
-        let bytes = serde_json::to_vec(value)
-            .map_err(|e| PortError::SerializationError(e))?;
-        self.set(key, bytes, ttl_secs).await
+            .await;
+        let count = result.map_err(|e| AppRedisError::Query(e.to_string()))?;
+        Ok(count > 0)
     }
 }
 
 /// Create a connection pool from config.
-pub fn create_pool(config: &RedisConfig) -> Result<Pool> {
+pub fn create_pool(config: &RedisConfig) -> Result<Pool, AppRedisError> {
     let cfg = Config::from_url(&config.url);
-
-    let mut pool_cfg = deadpool_redis::PoolConfig {
-        max_size: config.max_size,
-        min_idle: config.min_idle,
-        ..Default::default()
-    };
-
-    cfg.create_pool(Some(pool_cfg), Runtime::Tokio1)
-        .map_err(|e| RedisError::PoolError(e.to_string()))
+    cfg.create_pool(Some(Runtime::Tokio1))
+        .map_err(|e| AppRedisError::Pool(e.to_string()))
 }

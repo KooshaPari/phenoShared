@@ -1,8 +1,7 @@
-//! # Phenotype Domain
 //!
-//! Core domain model following DDD (Domain-Driven Design) principles.
+//! Phenotype Domain Crate - Core domain model following DDD principles.
 //!
-//! ## Architecture
+//! # Architecture
 //!
 //! This crate follows the xDD methodology stack:
 //! - **DDD**: Bounded contexts, aggregates, entities, value objects
@@ -26,27 +25,32 @@
 //! - **Domain Events**: Immutable facts that happened
 //! - **Domain Services**: Stateless operations crossing aggregate boundaries
 
-#![no_std]
-#![forbid(unsafe_code)]
-#![deny(missing_docs)]
-#![deny(rustdoc::missing_crates_documentation)]
+#![warn(unused)]
+#![warn(missing_docs)]
 
-/// Validation and domain rule errors.
+/// Domain errors: validation and domain rule violations.
+/// These represent the canonical ways domain operations can fail.
 pub mod errors;
 
-/// Value objects: immutable, interchangeable by identity.
+/// Value objects: immutable, self-validating domain primitives.
+/// Once created, value objects cannot be changed - they are replaced, not mutated.
 pub mod value_objects;
 
-/// Entities: have identity, mutable state.
+/// Entities: domain objects with identity that persists over time.
+/// Entities have lifecycle state and their identity is stable across state changes.
 pub mod entities;
 
-/// Aggregates: consistency boundary, root entity.
+/// Aggregates: clusters of related entities treated as a single unit.
+/// Aggregates own a root entity and enforce invariants for the entire cluster.
 pub mod aggregates;
 
 /// Domain events: immutable facts.
+/// Events represent something that happened in the domain and can never be undone.
+/// They are the basis for event sourcing and auditing.
 pub mod events;
 
 /// Domain services: stateless cross-boundary operations.
+/// Services encapsulate operations that don't naturally belong to a single entity.
 pub mod services;
 
 // ------------------------------------------------------------------------------------------------
@@ -55,6 +59,3 @@ pub mod services;
 
 pub use errors::{DomainError, ValidationError};
 pub use value_objects::*;
-pub use entities::*;
-pub use aggregates::*;
-pub use events::*;

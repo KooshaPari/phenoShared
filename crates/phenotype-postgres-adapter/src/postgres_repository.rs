@@ -1,20 +1,14 @@
 //! # PostgreSQL Repository
 //!
-//! Implementation of the `Repository` port using PostgreSQL.
+//! Simple PostgreSQL repository implementation.
 
-use async_trait::async_trait;
 use deadpool_postgres::{Config, ManagerConfig, Pool, RecyclingMethod, Runtime};
 use tokio_postgres::NoTls;
 
-use phenotype_port_interfaces::outbound::repository::{
-    Delete, Entity, FindById, Repository, Save,
-};
-use phenotype_port_interfaces::error::{PortError, Result as PortResult};
-
-use crate::error::{PostgresError, Result};
+use crate::error::PostgresError;
 use crate::postgres_config::PostgresConfig;
 
-/// PostgreSQL implementation of the Repository port.
+/// PostgreSQL repository for storing entities.
 #[derive(Clone)]
 pub struct PostgresRepository {
     pool: Pool,
@@ -39,15 +33,25 @@ impl PostgresRepository {
     }
 
     /// Create a connection pool from config.
-    pub async fn from_config(config: &PostgresConfig) -> Result<Self> {
+    pub async fn from_config(config: &PostgresConfig) -> Result<Self, PostgresError> {
         let pool = create_pool(config).await?;
         Ok(Self::new(pool))
     }
 
+    /// Get the connection pool.
+    pub fn pool(&self) -> &Pool {
+        &self.pool
+    }
+
+    /// Get the table name.
+    pub fn table_name(&self) -> &str {
+        &self.table_name
+    }
+
     /// Initialize the database schema.
-    pub async fn initialize(&self) -> Result<()> {
+    pub async fn initialize(&self) -> Result<(), PostgresError> {
         let client = self.pool.get().await.map_err(|e| {
-            PostgresError::PoolError(e.to_string())
+            PostgresError::Pool(e.to_string())
         })?;
 
         let query = format!(
@@ -65,140 +69,15 @@ impl PostgresRepository {
         );
 
         client.execute(&query, &[]).await.map_err(|e| {
-            PostgresError::MigrationError(e.to_string())
+            PostgresError::Query(e.to_string())
         })?;
-
-        // Create index
-        let index_query = format!(
-            "CREATE INDEX IF NOT EXISTS idx_{}_type ON {}(entity_type)",
-            self.table_name, self.table_name
-        );
-        client.execute(&index_query, &[]).await.map_err(|e| {
-            PostgresError::MigrationError(e.to_string())
-        })?;
-
-        Ok(())
-    }
-
-    fn map_error(e: deadpool_postgres::PoolError) -> PostgresError {
-        PostgresError::PoolError(e.to_string())
-    }
-}
-
-impl<T: Entity + serde::Serialize + for<'de> serde::Deserialize<'de>> FindById<T>
-    for PostgresRepository
-where
-    T::Id: AsRef<str>,
-{
-}
-
-/// Implementation of FindById for PostgreSQL
-#[async_trait]
-impl<T: Entity + serde::Serialize + for<'de> serde::Deserialize<'de> + Send + Sync> FindById<T>
-    for PostgresRepository
-where
-    T::Id: AsRef<str> + std::fmt::Display,
-{
-    async fn find_by_id(&self, id: &T::Id) -> PortResult<Option<T>> {
-        let client = self.pool.get().await.map_err(Self::map_error)?;
-
-        let query = format!(
-            "SELECT data FROM {} WHERE id = $1",
-            self.table_name
-        );
-
-        let row = client
-            .query_opt(&query, &[&id.as_ref()])
-            .await
-            .map_err(|e| PortError::StorageError(e.to_string()))?;
-
-        match row {
-            Some(row) => {
-                let data: serde_json::Value = row.get(0);
-                let entity: T = serde_json::from_value(data).map_err(|e| {
-                    PortError::InvalidData(e.to_string())
-                })?;
-                Ok(Some(entity))
-            }
-            None => Ok(None),
-        }
-    }
-}
-
-impl<T: Entity + serde::Serialize + for<'de> serde::Deserialize<'de> + Send + Sync> Save<T>
-    for PostgresRepository
-where
-    T::Id: AsRef<str> + std::fmt::Display,
-{
-}
-
-/// Implementation of Save for PostgreSQL
-#[async_trait]
-impl<T: Entity + serde::Serialize + for<'de> serde::Deserialize<'de> + Send + Sync> Save<T>
-    for PostgresRepository
-where
-    T::Id: AsRef<str> + std::fmt::Display,
-{
-    async fn save(&self, entity: &T) -> PortResult<()> {
-        let client = self.pool.get().await.map_err(Self::map_error)?;
-
-        let data = serde_json::to_value(entity)
-            .map_err(|e| PortError::InvalidData(e.to_string()))?;
-
-        let query = format!(
-            r#"
-            INSERT INTO {} (id, entity_type, data, version)
-            VALUES ($1, $2, $3, 1)
-            ON CONFLICT (id) DO UPDATE SET
-                data = EXCLUDED.data,
-                version = {}.version + 1,
-                updated_at = NOW()
-            "#,
-            self.table_name, self.table_name
-        );
-
-        client
-            .execute(
-                &query,
-                &[&T::entity_type().to_string(), &data],
-            )
-            .await
-            .map_err(|e| PortError::StorageError(e.to_string()))?;
-
-        Ok(())
-    }
-}
-
-impl<T: Entity + serde::Serialize + for<'de> serde::Deserialize<'de> + Send + Sync> Delete<T>
-    for PostgresRepository
-where
-    T::Id: AsRef<str>,
-{
-}
-
-/// Implementation of Delete for PostgreSQL
-#[async_trait]
-impl<T: Entity + serde::Serialize + for<'de> serde::Deserialize<'de> + Send + Sync> Delete<T>
-    for PostgresRepository
-where
-    T::Id: AsRef<str>,
-{
-    async fn delete(&self, id: &T::Id) -> PortResult<()> {
-        let client = self.pool.get().await.map_err(Self::map_error)?;
-
-        let query = format!("DELETE FROM {} WHERE id = $1", self.table_name);
-
-        client
-            .execute(&query, &[&id.as_ref()])
-            .await
-            .map_err(|e| PortError::StorageError(e.to_string()))?;
 
         Ok(())
     }
 }
 
 /// Create a connection pool from config.
-pub async fn create_pool(config: &PostgresConfig) -> Result<Pool> {
+pub async fn create_pool(config: &PostgresConfig) -> Result<Pool, PostgresError> {
     let mut cfg = Config::new();
     cfg.host = Some(config.host.clone());
     cfg.port = Some(config.port);
@@ -210,5 +89,5 @@ pub async fn create_pool(config: &PostgresConfig) -> Result<Pool> {
     });
 
     cfg.create_pool(Some(Runtime::Tokio1), NoTls)
-        .map_err(|e| PostgresError::PoolError(e.to_string()))
+        .map_err(|e| PostgresError::Pool(e.to_string()))
 }

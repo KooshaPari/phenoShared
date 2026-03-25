@@ -1,31 +1,33 @@
 //! # Error Types
 
-use thiserror::Error;
-
 /// Error type for Postgres adapter operations.
-#[derive(Error, Debug)]
+#[derive(Debug)]
 pub enum PostgresError {
-    #[error("Connection error: {0}")]
-    ConnectionError(String),
-
-    #[error("Query error: {0}")]
-    QueryError(String),
-
-    #[error("Not found: {0}")]
+    Connection(String),
+    Query(String),
     NotFound(String),
-
-    #[error("Already exists: {0}")]
     AlreadyExists(String),
-
-    #[error("Serialization error: {0}")]
-    SerializationError(#[from] serde_json::Error),
-
-    #[error("Pool error: {0}")]
-    PoolError(String),
-
-    #[error("Migration error: {0}")]
-    MigrationError(String),
+    Serialization(String),
+    Pool(String),
 }
 
-/// Result type alias for Postgres adapter operations.
-pub type Result<T> = std::result::Result<T, PostgresError>;
+impl std::fmt::Display for PostgresError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PostgresError::Connection(msg) => write!(f, "Connection error: {}", msg),
+            PostgresError::Query(msg) => write!(f, "Query error: {}", msg),
+            PostgresError::NotFound(msg) => write!(f, "Not found: {}", msg),
+            PostgresError::AlreadyExists(msg) => write!(f, "Already exists: {}", msg),
+            PostgresError::Serialization(msg) => write!(f, "Serialization error: {}", msg),
+            PostgresError::Pool(msg) => write!(f, "Pool error: {}", msg),
+        }
+    }
+}
+
+impl std::error::Error for PostgresError {}
+
+impl From<serde_json::Error> for PostgresError {
+    fn from(e: serde_json::Error) -> Self {
+        PostgresError::Serialization(e.to_string())
+    }
+}
