@@ -6,8 +6,6 @@ members = [
     
     # Domain crates (pure business logic)
     "crates/phenotype-domain",
-    "crates/phenotype-errors",
-    "crates/phenotype-serialization",
     
     # Event sourcing
     "crates/phenotype-event-sourcing",
