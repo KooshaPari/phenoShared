@@ -1,0 +1,17 @@
+[package]
+name = "phenotype-domain"
+version = "0.1.0"
+edition = "2021"
+description = "Phenotype domain core - DDD bounded contexts, aggregates, value objects"
+license = "MIT"
+
+# Zero-dependency domain core
+# Timestamps use Unix time (i64) - no external time library dependency
+# This ensures the domain can be embedded anywhere without dependency conflicts
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"], optional = true }
+
+[features]
+default = []
+serde = ["dep:serde"]

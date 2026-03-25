@@ -1,11 +1,29 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/phenotype-event-sourcing",
-    "crates/phenotype-cache-adapter",
-    "crates/phenotype-policy-engine",
-    "crates/phenotype-state-machine",
+    # Core ports (interfaces)
     "crates/phenotype-port-interfaces",
+    
+    # Domain crates (pure business logic)
+    "crates/phenotype-domain",
+    "crates/phenotype-errors",
+    "crates/phenotype-serialization",
+    
+    # Event sourcing
+    "crates/phenotype-event-sourcing",
+    
+    # State management
+    "crates/phenotype-state-machine",
+    "crates/phenotype-cache-adapter",
+    
+    # Policy engine
+    "crates/phenotype-policy-engine",
+    
+    # Infrastructure adapters (implement ports)
+    "crates/phenotype-postgres-adapter",
+    "crates/phenotype-redis-adapter",
+    "crates/phenotype-http-adapter",
+    "crates/phenotype-config-adapter",
 ]
 
 [workspace.package]
