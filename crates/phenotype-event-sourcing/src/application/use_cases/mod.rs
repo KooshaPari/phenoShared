@@ -49,7 +49,7 @@ impl<R: EventRepository> AppendEventUseCase<R> {
             event.prev_hash = "0".repeat(64);
         } else {
             // Get the previous event to get its hash
-            let events: Vec<EventEnvelope<T>> = self.repository.get_events(aggregate_type, aggregate_id)?;
+            let events = self.repository.get_events::<serde_json::Value>(aggregate_type, aggregate_id)?;
             if let Some(last_event) = events.last() {
                 event.prev_hash = last_event.hash.clone();
             }

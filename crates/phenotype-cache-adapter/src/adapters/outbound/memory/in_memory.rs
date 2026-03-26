@@ -15,7 +15,7 @@ use std::sync::Arc;
 /// L1 tier - Bounded LRU cache for hot data.
 pub struct L1Tier<K, V>
 where
-    K: Hash + Eq + Clone,
+    K: Hash + Eq,
     V: Clone,
 {
     cache: RwLock<LruCache<K, CacheEntry<V>>>,

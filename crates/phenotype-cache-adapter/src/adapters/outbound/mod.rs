@@ -8,4 +8,4 @@ pub mod memory;
 pub mod metrics;
 
 pub use memory::in_memory::{InMemoryEntryStore, InMemoryTier};
-pub use metrics::default::{AtomicMetricsCollector, NoopMetricsCollector};
+pub use metrics::default::{NoopMetricsCollector, AtomicMetricsCollector};

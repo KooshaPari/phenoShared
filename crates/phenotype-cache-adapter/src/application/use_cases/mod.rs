@@ -12,6 +12,8 @@ where
     K: Clone + std::hash::Hash + Eq + Send + Sync,
     V: Clone + Send + Sync,
     S: CacheService<K, V>,
+    K: Clone + std::hash::Hash + Eq + Send + Sync,
+    V: Clone + Send + Sync,
 {
     cache: S,
     _phantom: std::marker::PhantomData<(K, V)>,
@@ -46,6 +48,8 @@ where
     K: Clone + std::hash::Hash + Eq + Send + Sync,
     V: Clone + Send + Sync,
     S: CacheService<K, V>,
+    K: Clone + std::hash::Hash + Eq + Send + Sync,
+    V: Clone + Send + Sync,
 {
     cache: S,
     _phantom: std::marker::PhantomData<(K, V)>,
@@ -79,6 +83,8 @@ where
     K: Clone + std::hash::Hash + Eq + Send + Sync,
     V: Clone + Send + Sync,
     S: CacheService<K, V>,
+    K: Clone + std::hash::Hash + Eq + Send + Sync,
+    V: Clone + Send + Sync,
 {
     cache: S,
     _phantom: std::marker::PhantomData<(K, V)>,
@@ -108,6 +114,8 @@ where
     K: Clone + std::hash::Hash + Eq + Send + Sync,
     V: Clone + Send + Sync,
     S: CacheService<K, V>,
+    K: Clone + std::hash::Hash + Eq + Send + Sync,
+    V: Clone + Send + Sync,
 {
     cache: S,
     _phantom: std::marker::PhantomData<(K, V)>,
