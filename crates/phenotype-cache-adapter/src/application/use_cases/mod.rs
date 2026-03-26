@@ -11,6 +11,8 @@ use crate::application::dto::{CacheMetricsDto, CacheResponse};
 pub struct GetFromCache<K, V, S>
 where
     S: CacheService<K, V>,
+    K: Clone + std::hash::Hash + Eq + Send + Sync,
+    V: Clone + Send + Sync,
 {
     cache: S,
     _phantom: std::marker::PhantomData<(K, V)>,
@@ -43,6 +45,8 @@ where
 pub struct InsertIntoCache<K, V, S>
 where
     S: CacheService<K, V>,
+    K: Clone + std::hash::Hash + Eq + Send + Sync,
+    V: Clone + Send + Sync,
 {
     cache: S,
     _phantom: std::marker::PhantomData<(K, V)>,
@@ -74,6 +78,8 @@ where
 pub struct RemoveFromCache<K, V, S>
 where
     S: CacheService<K, V>,
+    K: Clone + std::hash::Hash + Eq + Send + Sync,
+    V: Clone + Send + Sync,
 {
     cache: S,
     _phantom: std::marker::PhantomData<(K, V)>,
@@ -101,6 +107,8 @@ where
 pub struct GetCacheMetrics<K, V, S>
 where
     S: CacheService<K, V>,
+    K: Clone + std::hash::Hash + Eq + Send + Sync,
+    V: Clone + Send + Sync,
 {
     cache: S,
     _phantom: std::marker::PhantomData<(K, V)>,

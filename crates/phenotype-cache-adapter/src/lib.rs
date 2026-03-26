@@ -103,7 +103,7 @@ where
     K: Hash + Eq + Clone + Send + Sync + 'static,
     V: Clone + Send + Sync + 'static,
 {
-    l1: Arc<RwLock<LruCache<DomainCacheEntry<V>, CacheEntry<V>>>>,
+    l1: Arc<RwLock<LruCache<K, DomainCacheEntry<V>>>>,
     l2: Arc<DashMap<K, DomainCacheEntry<V>>>,
     default_ttl: Duration,
     metrics: Arc<RwLock<CacheMetrics>>,
@@ -254,11 +254,33 @@ where
 // Re-export the domain CacheEntry for use in the legacy API
 pub use domain::entities::CacheEntry as DomainCacheEntry;
 
-// Implement MetricsHook for domain MetricsCollector
-impl<T: MetricsCollector + 'static> From<T> for Arc<dyn MetricsHook> {
-    fn from(collector: T) -> Self {
-        Arc::new(CollectorAdapter(collector))
+/// Adapter for MetricsCollector to MetricsHook.
+pub struct CollectorWrapper<T: MetricsCollector>(pub T);
+
+impl<T: MetricsCollector> MetricsHook for CollectorWrapper<T> {
+    fn on_l1_hit(&self) {
+        self.0.record_l1_hit();
     }
+    fn on_l2_hit(&self) {
+        self.0.record_l2_hit();
+    }
+    fn on_miss(&self) {
+        self.0.record_miss();
+    }
+    fn on_promotion(&self) {
+        self.0.record_promotion();
+    }
+    fn on_eviction(&self) {
+        self.0.record_eviction();
+    }
+    fn on_expiration(&self) {
+        self.0.record_expiration();
+    }
+}
+
+// Implement MetricsHook for domain MetricsCollector using a wrapper to avoid orphan rules
+pub fn wrap_collector<T: MetricsCollector + 'static>(collector: T) -> Arc<dyn MetricsHook> {
+    Arc::new(CollectorWrapper(collector))
 }
 
 struct CollectorAdapter<T>(T);

@@ -3,13 +3,28 @@
 //! These are pure domain objects with no external framework dependencies.
 
 use std::time::Instant;
+use std::hash::{Hash, Hasher};
 
 /// Cache entry with TTL support.
 /// Value object - immutable after creation.
 #[derive(Debug, Clone)]
 pub struct CacheEntry<V> {
     pub value: V,
-    expires_at: Instant,
+    pub expires_at: Instant,
+}
+
+impl<V: PartialEq> PartialEq for CacheEntry<V> {
+    fn eq(&self, other: &Self) -> bool {
+        self.value == other.value
+    }
+}
+
+impl<V: Eq> Eq for CacheEntry<V> {}
+
+impl<V: Hash> Hash for CacheEntry<V> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.value.hash(state);
+    }
 }
 
 impl<V> CacheEntry<V> {
