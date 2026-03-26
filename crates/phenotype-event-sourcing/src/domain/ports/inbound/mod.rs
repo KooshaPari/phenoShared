@@ -13,7 +13,7 @@ use super::super::entities::EventEnvelope;
 use chrono::{DateTime, Utc};
 
 /// Command to append a new event.
-pub struct AppendEventCommand<T> {
+pub struct AppendEventCommand<T: serde::Serialize + for<'de> serde::Deserialize<'de>> {
     pub aggregate_type: String,
     pub aggregate_id: String,
     pub event: EventEnvelope<T>,

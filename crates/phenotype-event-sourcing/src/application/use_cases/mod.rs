@@ -12,6 +12,9 @@ pub enum UseCaseError {
     #[error("Repository error: {0}")]
     Repository(#[from] RepositoryError),
 
+    #[error("Serialization error: {0}")]
+    Serialization(#[from] serde_json::Error),
+
     #[error("Invalid event: {0}")]
     InvalidEvent(String),
 
