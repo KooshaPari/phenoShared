@@ -57,6 +57,7 @@ impl<T: Serialize> EventEnvelope<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
 
     #[test]
     fn create_event_envelope() {

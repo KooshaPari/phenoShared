@@ -24,7 +24,7 @@ struct StoredEvent {
     hash: String,
     prev_hash: String,
     payload_json: serde_json::Value,
-    _event_type: String,
+    event_type: String,
     actor: String,
     timestamp: DateTime<Utc>,
     id: uuid::Uuid,
@@ -105,7 +105,7 @@ impl EventStore for InMemoryEventStore {
             hash,
             prev_hash,
             payload_json,
-            _event_type: event_type.to_string(),
+            event_type: event_type.to_string(),
             actor: event.actor.clone(),
             timestamp: event.timestamp,
             id: event.id,
@@ -233,7 +233,7 @@ impl EventStore for InMemoryEventStore {
             .map(|e| (e.hash.clone(), e.prev_hash.clone()))
             .collect();
 
-        Ok(hash::verify_chain(&chain).map_err(|e| EventStoreError::InvalidHash(e.to_string()))?)
+        hash::verify_chain(&chain).map_err(|e| EventStoreError::InvalidHash(e.to_string()))
     }
 }
 
@@ -273,9 +273,7 @@ mod tests {
         let p1 = TestPayload { value: 1, name: "a".to_string() };
         let p2 = TestPayload { value: 2, name: "b".to_string() };
         let e1 = EventEnvelope::new(p1, "user1");
-        // Use the same ID to simulate events for the same entity
-        let mut e2 = EventEnvelope::new(p2, "user1");
-        e2.id = e1.id;
+        let e2 = EventEnvelope::new(p2, "user1");
 
         let s1 = store.append(&e1, "Event").unwrap();
         let s2 = store.append(&e2, "Event").unwrap();
