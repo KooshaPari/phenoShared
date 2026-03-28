@@ -208,3 +208,25 @@ Traces to: E8.3
 
 **FR-TS-008**: `generateCorrelationId()` SHALL be a convenience wrapper that calls `generateId("correlation")`.
 Traces to: E8.3
+
+---
+
+## Workspace Ergonomics and Versioning (phenotype-shared workspace)
+
+**FR-WS-001**: Each crate in the workspace SHALL have its own `[package]` block with `version`, `description`, and `license` fields populated so that the crate is independently publishable to crates.io.
+Traces to: E9.1
+
+**FR-WS-002**: No crate in the workspace SHALL depend on another crate in the same workspace via a path dependency. All inter-service sharing is done by the consuming service depending on individual published crates.
+Traces to: E9.1
+
+**FR-WS-003**: All shared dependencies (serde, tokio, thiserror, dashmap, lru, parking_lot, moka, uuid, chrono, regex, sha2, tracing) SHALL be declared in `[workspace.dependencies]` with pinned major versions. Individual crates SHALL reference them using `workspace = true`.
+Traces to: E9.2
+
+**FR-WS-004**: The workspace root `Cargo.toml` SHALL carry a `[workspace.package]` section defining the shared edition, license, and repository URL inherited by all member crates.
+Traces to: E9.2
+
+**FR-WS-005**: A `CHANGELOG.md` entry SHALL be authored for every published version of any crate, documenting breaking changes, new features, and bug fixes.
+Traces to: E9.3
+
+**FR-WS-006**: Breaking API changes in any crate SHALL result in a major version increment for that crate. Additive changes SHALL result in a minor increment. Bug-fix-only changes SHALL result in a patch increment.
+Traces to: E9.3

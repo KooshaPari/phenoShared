@@ -242,3 +242,37 @@ Acceptance criteria:
 - ID format validated against `/^[a-z]{2,3}_[0-9A-HJKMNP-TV-Z]{26}$/`.
 - `validateId`, `parseId`, `generateCorrelationId` exported.
 - `PREFIX_MAP` and `REVERSE_PREFIX_MAP` exported for introspection.
+
+---
+
+### E9: Workspace Ergonomics and Crate Versioning
+
+**E9.1: Independent Crate Publication**
+As a platform engineer, I need each crate to be independently publishable to crates.io so that
+consuming services can take only the crates they need without transitive dependencies on unused
+infrastructure.
+
+Acceptance criteria:
+- Each crate has its own `[package]` block with `version`, `description`, `license`.
+- No crate has a path dependency on another crate in this workspace.
+- `cargo publish -p <crate>` succeeds for each crate independently.
+
+**E9.2: Workspace Dependency Version Pinning**
+As a maintainer, I need all shared dependency versions pinned at the workspace level so that
+all crates agree on transitive dependency versions and avoid resolver conflicts.
+
+Acceptance criteria:
+- All shared dependencies (serde, tokio, thiserror, dashmap, etc.) are declared in
+  `[workspace.dependencies]` with pinned major versions.
+- Individual crates reference workspace deps using `workspace = true`.
+- `cargo update` does not silently upgrade a dep for one crate while leaving another behind.
+
+**E9.3: Backward Compatibility Policy**
+As a consuming service, I need a documented semver backward compatibility policy so that I
+can plan upgrades confidently.
+
+Acceptance criteria:
+- Semver is followed: patch = no API change, minor = additive only, major = breaking.
+- Breaking changes in any crate must update that crate's major version.
+- A `CHANGELOG.md` entry is required for every published version.
+- Public API is defined as: all items reachable via `pub use` re-exports in `lib.rs`.
