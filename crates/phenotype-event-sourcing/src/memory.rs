@@ -273,8 +273,8 @@ mod tests {
         let e1 = EventEnvelope::new(p1, "user1");
         let e2 = EventEnvelope::new(p2, "user1");
 
-        let s1 = store.append(&e1, "Event").unwrap();
-        let s2 = store.append(&e2, "Event").unwrap();
+        let s1 = store.append(&e1, "Event", "entity-1").unwrap();
+        let s2 = store.append(&e2, "Event", "entity-1").unwrap();
 
         assert_eq!(s1, 1);
         assert_eq!(s2, 2);
