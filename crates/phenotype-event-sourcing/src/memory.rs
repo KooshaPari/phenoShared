@@ -24,7 +24,7 @@ struct StoredEvent {
     hash: String,
     prev_hash: String,
     payload_json: serde_json::Value,
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Stored for future event-type-based filtering and replay queries
     event_type: String,
     actor: String,
     timestamp: DateTime<Utc>,
@@ -66,17 +66,14 @@ impl EventStore for InMemoryEventStore {
     fn append<T: Serialize + for<'de> Deserialize<'de>>(
         &self,
         event: &EventEnvelope<T>,
-        event_type: &str,
+        entity_type: &str,
+        entity_id: &str,
     ) -> Result<i64> {
         let mut store = self.events.write().map_err(|_| EventStoreError::StorageError("Lock poisoned".into()))?;
 
-        // For simplicity, use the UUID string as entity_id if needed
-        let entity_id = event.id.to_string();
-        let entity_type = "generic";
-
         // Get or create the entity's event list
         let entity_map = store.entry(entity_type.to_string()).or_insert_with(std::collections::BTreeMap::new);
-        let events = entity_map.entry(entity_id.clone()).or_insert_with(Vec::new);
+        let events = entity_map.entry(entity_id.to_string()).or_insert_with(Vec::new);
 
         // Compute sequence number and hash
         let sequence = if events.is_empty() { 1 } else { events.last().unwrap().sequence + 1 };
@@ -94,7 +91,7 @@ impl EventStore for InMemoryEventStore {
         let hash = hash::compute_hash(
             &event.id,
             event.timestamp,
-            event_type,
+            entity_type,
             &payload_json,
             &event.actor,
             &prev_hash,
@@ -106,7 +103,6 @@ impl EventStore for InMemoryEventStore {
             hash,
             prev_hash,
             payload_json,
-            event_type: event_type.to_string(),
             actor: event.actor.clone(),
             timestamp: event.timestamp,
             id: event.id,
@@ -258,11 +254,12 @@ mod tests {
         };
         let event = EventEnvelope::new(payload.clone(), "user1");
 
-        let seq = store.append(&event, "TestEvent").unwrap();
+        let entity_id = "entity-1";
+        let seq = store.append(&event, "TestEvent", entity_id).unwrap();
         assert_eq!(seq, 1);
 
         let retrieved = store
-            .get_events::<TestPayload>("generic", &event.id.to_string())
+            .get_events::<TestPayload>("TestEvent", entity_id)
             .unwrap();
         assert_eq!(retrieved.len(), 1);
         assert_eq!(retrieved[0].payload.value, 42);
@@ -276,8 +273,8 @@ mod tests {
         let e1 = EventEnvelope::new(p1, "user1");
         let e2 = EventEnvelope::new(p2, "user1");
 
-        let s1 = store.append(&e1, "Event").unwrap();
-        let s2 = store.append(&e2, "Event").unwrap();
+        let s1 = store.append(&e1, "Event", "entity-1").unwrap();
+        let s2 = store.append(&e2, "Event", "entity-1").unwrap();
 
         assert_eq!(s1, 1);
         assert_eq!(s2, 2);
