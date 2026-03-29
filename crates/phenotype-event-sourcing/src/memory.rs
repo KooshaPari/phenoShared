@@ -24,7 +24,7 @@ struct StoredEvent {
     hash: String,
     prev_hash: String,
     payload_json: serde_json::Value,
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Stored for future event-type-based filtering and replay queries
     event_type: String,
     actor: String,
     timestamp: DateTime<Utc>,
@@ -106,7 +106,6 @@ impl EventStore for InMemoryEventStore {
             hash,
             prev_hash,
             payload_json,
-            event_type: event_type.to_string(),
             actor: event.actor.clone(),
             timestamp: event.timestamp,
             id: event.id,
