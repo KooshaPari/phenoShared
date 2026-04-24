@@ -1,0 +1,102 @@
+name: Reusable Coverage
+
+# Reusable workflow: run language-specific coverage and upload to Codecov.
+# Default command assumes a Rust project using cargo-llvm-cov; override `coverage-command`
+# for Python/TS/Go consumers.
+
+on:
+  workflow_call:
+    inputs:
+      language:
+        description: 'Primary language (rust|python|typescript|go|custom)'
+        type: string
+        required: false
+        default: 'rust'
+      path:
+        description: 'Working directory'
+        type: string
+        required: false
+        default: '.'
+      coverage-command:
+        description: 'Custom coverage command (overrides language default)'
+        type: string
+        required: false
+        default: ''
+      upload-artifact-name:
+        description: 'Name of the uploaded coverage artifact'
+        type: string
+        required: false
+        default: 'coverage-results'
+      codecov-flags:
+        description: 'Codecov flags (comma-separated)'
+        type: string
+        required: false
+        default: ''
+    secrets:
+      CODECOV_TOKEN:
+        required: false
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.path }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        if: ${{ inputs.language == 'rust' && inputs.coverage-command == '' }}
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
+
+      - name: Install cargo-llvm-cov
+        if: ${{ inputs.language == 'rust' && inputs.coverage-command == '' }}
+        uses: taiki-e/install-action@cargo-llvm-cov
+
+      - name: Run coverage
+        shell: bash
+        run: |
+          if [ -n "${{ inputs.coverage-command }}" ]; then
+            eval "${{ inputs.coverage-command }}"
+          else
+            case "${{ inputs.language }}" in
+              rust)
+                cargo llvm-cov --workspace --lcov --output-path lcov.info
+                ;;
+              python)
+                python -m pip install --upgrade pip coverage
+                coverage run -m pytest
+                coverage xml -o coverage.xml
+                ;;
+              typescript)
+                npm ci && npm test -- --coverage
+                ;;
+              go)
+                go test ./... -coverprofile=coverage.out
+                ;;
+              *)
+                echo "No default coverage command for language=${{ inputs.language }}"
+                exit 1
+                ;;
+            esac
+          fi
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.upload-artifact-name }}
+          path: |
+            ${{ inputs.path }}/lcov.info
+            ${{ inputs.path }}/coverage.xml
+            ${{ inputs.path }}/coverage.out
+            ${{ inputs.path }}/coverage/
+          if-no-files-found: ignore
+
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          flags: ${{ inputs.codecov-flags }}
+          fail_ci_if_error: false
