@@ -1,0 +1,17 @@
+name: reusable-self-merge-gate
+on:
+  workflow_call:
+    inputs:
+      script-path:
+        description: Path to the self-merge gate script in the caller repo.
+        required: false
+        type: string
+        default: ./scripts/self-merge-gate.sh
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    if: github.event.review.state == 'approved'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check self-merge eligibility
+        run: ${{ inputs.script-path }}
