@@ -22,9 +22,6 @@ on:
         required: false
         default: 'ubuntu-latest'
 
-permissions:
-  contents: read
-
 jobs:
   guard:
     runs-on: ${{ inputs.runs-on }}

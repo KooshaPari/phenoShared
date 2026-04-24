@@ -26,11 +26,6 @@ on:
         required: false
         default: 'autobuild'
 
-permissions:
-  actions: read
-  contents: read
-  security-events: write
-
 jobs:
   codeql:
     runs-on: ubuntu-latest

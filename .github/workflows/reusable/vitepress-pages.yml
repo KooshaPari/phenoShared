@@ -28,11 +28,6 @@ on:
         type: string
         default: '.vitepress/dist'
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
 concurrency:
   group: ${{ inputs.concurrency_group }}
   cancel-in-progress: false

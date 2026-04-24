@@ -2,7 +2,8 @@ name: Security Scan
 
 permissions:
   contents: read
-  security-events: write
+  checks: write
+  pull-requests: write
 
 on:
   workflow_call:
@@ -34,7 +35,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      security-events: write
+      checks: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
         with:

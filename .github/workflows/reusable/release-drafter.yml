@@ -1,8 +1,7 @@
 name: Reusable Release Drafter
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 on:
   workflow_call:
@@ -22,9 +21,6 @@ on:
         type: boolean
         required: false
         default: false
-
-permissions:
-  contents: read
 
 jobs:
   update_release_draft:
