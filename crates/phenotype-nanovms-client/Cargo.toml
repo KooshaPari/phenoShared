@@ -1,0 +1,62 @@
+[package]
+name = "phenotype-nanovms-client"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "Rust client library for NanoVMs unikernel orchestration (wraps the `ops` CLI)"
+repository = "https://github.com/KooshaPari/phenoShared"
+keywords = ["nanovms", "unikernel", "ops", "sandbox", "orchestration"]
+categories = ["os", "virtualization", "api-bindings"]
+rust-version = "1.75"
+authors = ["Phenotype contributors"]
+readme = "README.md"
+
+[lib]
+name = "phenotype_nanovms_client"
+path = "src/lib.rs"
+
+[dependencies]
+# Async runtime
+tokio = { workspace = true }
+async-trait = "0.1"
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+
+# HTTP client (optional)
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], optional = true }
+
+# gRPC support (optional)
+tonic = { version = "0.12", optional = true }
+prost = { version = "0.13", optional = true }
+
+# FFI support (optional)
+libc = { version = "0.2", optional = true }
+
+# Utilities
+tracing = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+tempfile = "3"
+
+[dev-dependencies]
+tokio-test = "0.4"
+mockall = "0.13"
+wiremock = "0.6"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+[features]
+default = ["cli-client"]
+cli-client = []            # Use OPS CLI for communication
+http-client = ["reqwest"]  # Use HTTP REST API
+grpc-client = ["tonic", "prost"]  # Use gRPC
+ffi-client = ["libc"]      # Use FFI bindings
+
+[[example]]
+name = "basic_sandbox"
+path = "examples/basic_sandbox.rs"

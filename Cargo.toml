@@ -7,6 +7,7 @@ members = [
     "crates/phenotype-domain",
     "crates/phenotype-event-sourcing",
     "crates/phenotype-http-adapter",
+    "crates/phenotype-nanovms-client",
     "crates/phenotype-policy-engine",
     "crates/phenotype-port-interfaces",
     "crates/phenotype-postgres-adapter",
