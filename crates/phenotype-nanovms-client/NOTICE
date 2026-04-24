@@ -1,0 +1,11 @@
+phenotype-nanovms-client
+Copyright (c) 2026 Phenotype contributors
+
+This crate wraps the NanoVMs `ops` CLI (https://github.com/nanovms/ops),
+which is distributed under the MIT License. The `ops` binary is invoked as
+an external process; no upstream source is vendored into this crate.
+
+Portions of this crate were originally authored inside the bare-cua
+integration worktree (integration 014-nanovms-integration) and have been
+promoted to the phenotype-shared (phenoShared) workspace for reuse by
+bare-cua and helioscli integration 015.
