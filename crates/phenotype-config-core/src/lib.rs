@@ -7,6 +7,8 @@ use serde::de::DeserializeOwned;
 use serde_json::Value;
 use std::path::Path;
 
+type ConfigErrorSource = Box<dyn std::error::Error + Send + Sync + 'static>;
+
 /// Configuration source priority (higher = takes precedence).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub struct Priority(u8);
@@ -68,18 +70,17 @@ impl ConfigSource {
 /// Trait for configuration loaders.
 pub trait ConfigLoader: Send + Sync {
     /// Loads configuration from this source as a JSON value.
-    fn load_value(&self) -> Result<Value, Box<dyn std::error::Error>>;
+    fn load_value(&self) -> Result<Value, ConfigErrorSource>;
 
     /// Returns the source name.
     fn source_name(&self) -> &str;
 
     /// Loads configuration from this source into a typed structure.
-    fn load<T: DeserializeOwned>(&self) -> Result<T, Box<dyn std::error::Error>>
+    fn load<T: DeserializeOwned>(&self) -> Result<T, ConfigErrorSource>
     where
         Self: Sized,
     {
-        serde_json::from_value(self.load_value()?)
-            .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
+        serde_json::from_value(self.load_value()?).map_err(|e| Box::new(e) as ConfigErrorSource)
     }
 }
 
@@ -129,7 +130,7 @@ impl EnvConfig {
 }
 
 impl ConfigLoader for EnvConfig {
-    fn load_value(&self) -> Result<Value, Box<dyn std::error::Error>> {
+    fn load_value(&self) -> Result<Value, ConfigErrorSource> {
         let env_vars: serde_json::Map<String, Value> = match &self.prefix {
             Some(prefix) => {
                 let prefix = format!("{prefix}_");
@@ -202,8 +203,8 @@ impl FileConfig {
 }
 
 impl ConfigLoader for FileConfig {
-    fn load_value(&self) -> Result<Value, Box<dyn std::error::Error>> {
-        self.load::<Value>().map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
+    fn load_value(&self) -> Result<Value, ConfigErrorSource> {
+        self.load::<Value>().map_err(|e| Box::new(e) as ConfigErrorSource)
     }
 
     fn source_name(&self) -> &str {
@@ -237,7 +238,7 @@ pub enum ConfigMergeError {
 /// Merges multiple configuration sources.
 pub fn merge_configs<T: DeserializeOwned>(
     sources: &[&dyn ConfigLoader],
-) -> Result<T, Box<dyn std::error::Error>> {
+) -> Result<T, ConfigErrorSource> {
     let mut merged = serde_json::Map::new();
 
     for source in sources {
@@ -255,8 +256,7 @@ pub fn merge_configs<T: DeserializeOwned>(
         }
     }
 
-    serde_json::from_value(Value::Object(merged))
-        .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
+    serde_json::from_value(Value::Object(merged)).map_err(|e| Box::new(e) as ConfigErrorSource)
 }
 
 fn merge_objects(
@@ -300,7 +300,7 @@ mod tests {
     }
 
     impl ConfigLoader for StaticLoader {
-        fn load_value(&self) -> Result<Value, Box<dyn std::error::Error>> {
+        fn load_value(&self) -> Result<Value, ConfigErrorSource> {
             Ok(self.value.clone())
         }
 
@@ -312,7 +312,7 @@ mod tests {
     struct ErrorLoader;
 
     impl ConfigLoader for ErrorLoader {
-        fn load_value(&self) -> Result<Value, Box<dyn std::error::Error>> {
+        fn load_value(&self) -> Result<Value, ConfigErrorSource> {
             Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid config")))
         }
 
