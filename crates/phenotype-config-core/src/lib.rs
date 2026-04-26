@@ -3,8 +3,11 @@
 //! This crate provides shared configuration abstractions used across
 //! the Phenotype ecosystem.
 
-use serde::{de::DeserializeOwned, Serialize};
+use serde::de::DeserializeOwned;
+use serde_json::Value;
 use std::path::Path;
+
+type ConfigErrorSource = Box<dyn std::error::Error + Send + Sync + 'static>;
 
 /// Configuration source priority (higher = takes precedence).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default)]
@@ -55,28 +58,30 @@ pub struct ConfigSource {
 impl ConfigSource {
     /// Creates a new configuration source.
     pub fn new(name: impl Into<String>, priority: Priority) -> Self {
-        Self {
-            name: name.into(),
-            priority,
-        }
+        Self { name: name.into(), priority }
     }
 
     /// Creates a source with default priority.
     pub fn default_source(name: impl Into<String>) -> Self {
-        Self::new(name, Priority::DEFAULT)
+        Self::new(name, Priority::new(Priority::DEFAULT))
     }
 }
 
 /// Trait for configuration loaders.
 pub trait ConfigLoader: Send + Sync {
-    /// The error type for loading.
-    type Error: std::error::Error + Send + Sync + 'static;
-
-    /// loads configuration from this source.
-    fn load<T: DeserializeOwned + Serialize>(&self) -> Result<T, Self::Error>;
+    /// Loads configuration from this source as a JSON value.
+    fn load_value(&self) -> Result<Value, ConfigErrorSource>;
 
     /// Returns the source name.
     fn source_name(&self) -> &str;
+
+    /// Loads configuration from this source into a typed structure.
+    fn load<T: DeserializeOwned>(&self) -> Result<T, ConfigErrorSource>
+    where
+        Self: Sized,
+    {
+        serde_json::from_value(self.load_value()?).map_err(|e| Box::new(e) as ConfigErrorSource)
+    }
 }
 
 /// Trait for configuration validation.
@@ -111,9 +116,7 @@ impl EnvConfig {
 
     /// Creates a new environment configuration source with a prefix.
     pub fn with_prefix(prefix: impl Into<String>) -> Self {
-        Self {
-            prefix: Some(prefix.into()),
-        }
+        Self { prefix: Some(prefix.into()) }
     }
 
     /// Gets a value from the environment.
@@ -127,16 +130,20 @@ impl EnvConfig {
 }
 
 impl ConfigLoader for EnvConfig {
-    type Error = std::env::VarError;
+    fn load_value(&self) -> Result<Value, ConfigErrorSource> {
+        let Some(prefix) = &self.prefix else {
+            return Ok(Value::Object(serde_json::Map::new()));
+        };
 
-    fn load<T: DeserializeOwned + Serialize>(&self) -> Result<T, Self::Error> {
-        // For simple env loading, we parse the entire env as JSON
-        let env_vars: std::collections::HashMap<String, String> =
-            std::env::vars().collect();
+        let prefix = format!("{prefix}_");
+        let env_vars: serde_json::Map<String, Value> = std::env::vars()
+            .filter_map(|(key, value)| {
+                key.strip_prefix(&prefix)
+                    .map(|stripped| (stripped.to_uppercase(), Value::String(value)))
+            })
+            .collect();
 
-        let json = serde_json::to_string(&env_vars)?;
-
-        serde_json::from_str(&json).map_err(|_| std::env::VarError::NotPresent)
+        Ok(Value::Object(env_vars))
     }
 
     fn source_name(&self) -> &str {
@@ -181,14 +188,24 @@ impl FileConfig {
     }
 
     /// Loads configuration from the file.
-    pub fn load<T: DeserializeOwned + Serialize>(&self) -> Result<T, FileConfigError> {
+    pub fn load<T: DeserializeOwned>(&self) -> Result<T, FileConfigError> {
         let content = std::fs::read_to_string(&self.path)?;
 
         match self.format {
-            ConfigFormat::Json => serde_json::from_str(&content).map_err(FileConfigError::Parse),
-            ConfigFormat::Toml => toml::from_str(&content).map_err(FileConfigError::Parse),
-            ConfigFormat::Yaml => serde_yaml::from_str(&content).map_err(FileConfigError::Parse),
+            ConfigFormat::Json => serde_json::from_str(&content).map_err(Into::into),
+            ConfigFormat::Toml => toml::from_str(&content).map_err(Into::into),
+            ConfigFormat::Yaml => serde_yaml::from_str(&content).map_err(Into::into),
         }
+    }
+}
+
+impl ConfigLoader for FileConfig {
+    fn load_value(&self) -> Result<Value, ConfigErrorSource> {
+        self.load::<Value>().map_err(|e| Box::new(e) as ConfigErrorSource)
+    }
+
+    fn source_name(&self) -> &str {
+        self.path.to_str().unwrap_or("file")
     }
 }
 
@@ -198,49 +215,104 @@ pub enum FileConfigError {
     #[error("failed to read file: {0}")]
     Io(#[from] std::io::Error),
 
-    #[error("failed to parse: {0}")]
-    Parse(String),
+    #[error("failed to parse JSON: {0}")]
+    Json(#[from] serde_json::Error),
+
+    #[error("failed to parse TOML: {0}")]
+    Toml(#[from] toml::de::Error),
+
+    #[error("failed to parse YAML: {0}")]
+    Yaml(#[from] serde_yaml::Error),
 }
 
-impl From<serde_json::Error> for FileConfigError {
-    fn from(e: serde_json::Error) -> Self {
-        Self::Parse(e.to_string())
-    }
-}
-
-impl From<toml::de::Error> for FileConfigError {
-    fn from(e: toml::de::Error) -> Self {
-        Self::Parse(e.to_string())
-    }
+/// Configuration merge error.
+#[derive(Debug, thiserror::Error)]
+pub enum ConfigMergeError {
+    #[error("configuration source `{source_name}` returned {kind}; expected object")]
+    NonObject { source_name: String, kind: &'static str },
 }
 
 /// Merges multiple configuration sources.
-pub fn merge_configs<T: DeserializeOwned + Serialize + Default>(
+pub fn merge_configs<T: DeserializeOwned>(
     sources: &[&dyn ConfigLoader],
-) -> Result<T, Box<dyn std::error::Error>>
-where
-    <dyn ConfigLoader>::Error: 'static,
-{
+) -> Result<T, ConfigErrorSource> {
     let mut merged = serde_json::Map::new();
 
     for source in sources {
-        match source.load::<serde_json::Value>() {
-            Ok(value) => {
-                if let serde_json::Value::Object(map) = value {
-                    merged.extend(map);
-                }
+        match source.load_value() {
+            Ok(Value::Object(map)) => {
+                merge_objects(&mut merged, map);
             }
-            Err(_) => continue,
+            Ok(value) => {
+                return Err(Box::new(ConfigMergeError::NonObject {
+                    source_name: source.source_name().to_string(),
+                    kind: value_kind(&value),
+                }));
+            }
+            Err(err) => return Err(err),
         }
     }
 
-    serde_json::from_value(serde_json::Value::Object(merged))
-    serde_json::from_value(serde_json::Value::Object(merged))
-        .map_err(|e| Box::new(e) as Box<dyn std::error::Error>))
+    serde_json::from_value(Value::Object(merged)).map_err(|e| Box::new(e) as ConfigErrorSource)
+}
+
+fn merge_objects(
+    target: &mut serde_json::Map<String, Value>,
+    source: serde_json::Map<String, Value>,
+) {
+    for (key, source_value) in source {
+        match (target.get_mut(&key), source_value) {
+            (Some(Value::Object(target_object)), Value::Object(source_object)) => {
+                merge_objects(target_object, source_object);
+            }
+            (_, value) => {
+                target.insert(key, value);
+            }
+        }
+    }
+}
+
+fn value_kind(value: &Value) -> &'static str {
+    match value {
+        Value::Null => "null",
+        Value::Bool(_) => "boolean",
+        Value::Number(_) => "number",
+        Value::String(_) => "string",
+        Value::Array(_) => "array",
+        Value::Object(_) => "object",
+    }
+}
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    struct StaticLoader {
+        name: &'static str,
+        value: Value,
+    }
+
+    impl ConfigLoader for StaticLoader {
+        fn load_value(&self) -> Result<Value, ConfigErrorSource> {
+            Ok(self.value.clone())
+        }
+
+        fn source_name(&self) -> &str {
+            self.name
+        }
+    }
+
+    struct ErrorLoader;
+
+    impl ConfigLoader for ErrorLoader {
+        fn load_value(&self) -> Result<Value, ConfigErrorSource> {
+            Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid config")))
+        }
+
+        fn source_name(&self) -> &str {
+            "error-source"
+        }
+    }
 
     #[test]
     fn test_priority_ordering() {
@@ -258,6 +330,38 @@ mod tests {
     }
 
     #[test]
+    fn test_prefixed_env_config_load_value_is_scoped() {
+        std::env::set_var("APP_ALLOWED", "scoped");
+        std::env::set_var("APP_PORT", "8080");
+        std::env::set_var("APP_ENABLED", "true");
+        std::env::set_var("OTHER_ALLOWED", "global");
+
+        let value = EnvConfig::with_prefix("APP").load_value().unwrap();
+
+        assert_eq!(value.get("ALLOWED"), Some(&Value::String("scoped".to_string())));
+        assert_eq!(value.get("PORT"), Some(&Value::String("8080".to_string())));
+        assert_eq!(value.get("ENABLED"), Some(&Value::String("true".to_string())));
+        assert!(value.get("APP_ALLOWED").is_none());
+        assert!(value.get("OTHER_ALLOWED").is_none());
+
+        std::env::remove_var("APP_ALLOWED");
+        std::env::remove_var("APP_PORT");
+        std::env::remove_var("APP_ENABLED");
+        std::env::remove_var("OTHER_ALLOWED");
+    }
+
+    #[test]
+    fn test_unprefixed_env_config_load_value_is_empty() {
+        std::env::set_var("UNSCOPED_SECRET", "hidden");
+
+        let value = EnvConfig::new().load_value().unwrap();
+
+        assert_eq!(value, Value::Object(serde_json::Map::new()));
+
+        std::env::remove_var("UNSCOPED_SECRET");
+    }
+
+    #[test]
     fn test_config_format_detection() {
         assert_eq!(
             ConfigFormat::from_path(std::path::Path::new("config.json")),
@@ -271,5 +375,54 @@ mod tests {
             ConfigFormat::from_path(std::path::Path::new("config.yaml")),
             Some(ConfigFormat::Yaml)
         );
+    }
+
+    #[test]
+    fn test_file_config_error_preserves_parse_source() {
+        let err: FileConfigError = serde_yaml::from_str::<Value>("[invalid").unwrap_err().into();
+        assert!(std::error::Error::source(&err).is_some());
+    }
+
+    #[test]
+    fn test_merge_configs_merges_object_sources() {
+        let first = StaticLoader { name: "first", value: serde_json::json!({ "a": 1 }) };
+        let second = StaticLoader { name: "second", value: serde_json::json!({ "b": 2 }) };
+
+        let merged = merge_configs::<Value>(&[&first, &second]).unwrap();
+        assert_eq!(merged, serde_json::json!({ "a": 1, "b": 2 }));
+    }
+
+    #[test]
+    fn test_merge_configs_deep_merges_nested_objects() {
+        let first = StaticLoader {
+            name: "first",
+            value: serde_json::json!({ "database": { "host": "localhost", "port": 5432 } }),
+        };
+        let second = StaticLoader {
+            name: "second",
+            value: serde_json::json!({ "database": { "port": 6432 } }),
+        };
+
+        let merged = merge_configs::<Value>(&[&first, &second]).unwrap();
+
+        assert_eq!(
+            merged,
+            serde_json::json!({ "database": { "host": "localhost", "port": 6432 } })
+        );
+    }
+
+    #[test]
+    fn test_merge_configs_rejects_non_object_sources() {
+        let loader = StaticLoader { name: "array-source", value: serde_json::json!(["invalid"]) };
+
+        let err = merge_configs::<Value>(&[&loader]).unwrap_err();
+        assert!(err.to_string().contains("array-source"));
+        assert!(err.to_string().contains("array"));
+    }
+
+    #[test]
+    fn test_merge_configs_propagates_loader_errors() {
+        let err = merge_configs::<Value>(&[&ErrorLoader]).unwrap_err();
+        assert!(err.to_string().contains("invalid config"));
     }
 }
