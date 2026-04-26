@@ -130,8 +130,17 @@ impl EnvConfig {
 
 impl ConfigLoader for EnvConfig {
     fn load_value(&self) -> Result<Value, Box<dyn std::error::Error>> {
-        // For simple env loading, expose the entire environment as an object.
-        let env_vars: std::collections::HashMap<String, String> = std::env::vars().collect();
+        let env_vars: std::collections::HashMap<String, String> = match &self.prefix {
+            Some(prefix) => {
+                let prefix = format!("{prefix}_");
+                std::env::vars()
+                    .filter_map(|(key, value)| {
+                        key.strip_prefix(&prefix).map(|stripped| (stripped.to_string(), value))
+                    })
+                    .collect()
+            }
+            None => std::env::vars().collect(),
+        };
 
         serde_json::to_value(env_vars).map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
     }
@@ -302,6 +311,21 @@ mod tests {
         let config = EnvConfig::new();
         assert_eq!(config.get("TEST_VAR"), Some("test_value".to_string()));
         std::env::remove_var("TEST_VAR");
+    }
+
+    #[test]
+    fn test_prefixed_env_config_load_value_is_scoped() {
+        std::env::set_var("APP_ALLOWED", "scoped");
+        std::env::set_var("OTHER_ALLOWED", "global");
+
+        let value = EnvConfig::with_prefix("APP").load_value().unwrap();
+
+        assert_eq!(value.get("ALLOWED"), Some(&Value::String("scoped".to_string())));
+        assert!(value.get("APP_ALLOWED").is_none());
+        assert!(value.get("OTHER_ALLOWED").is_none());
+
+        std::env::remove_var("APP_ALLOWED");
+        std::env::remove_var("OTHER_ALLOWED");
     }
 
     #[test]
