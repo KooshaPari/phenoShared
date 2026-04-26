@@ -101,6 +101,27 @@ export interface Checkpoint {
  */
 export type EnvelopeType = "command" | "response" | "event";
 
+export type ErrorCode =
+    | "INTERNAL_ERROR"
+    | "INVALID_ARGUMENT"
+    | "NOT_FOUND"
+    | "ALREADY_EXISTS"
+    | "PERMISSION_DENIED"
+    | "UNAUTHENTICATED"
+    | "RESOURCE_EXHAUSTED"
+    | "CANCELLED"
+    | "UNAVAILABLE"
+    | "NOT_IMPLEMENTED"
+    | "TIMEOUT"
+    | "VALIDATION_ERROR"
+    | "METHOD_NOT_SUPPORTED"
+    | "MISSING_CORRELATION_ID"
+    | "TERMINAL_NOT_FOUND"
+    | "LANE_NOT_FOUND"
+    | "SESSION_NOT_FOUND"
+    | "SESSION_NOT_ATTACHED"
+    | "TERMINAL_BINDING_INVALID";
+
 export interface BaseEnvelope {
     readonly id: string;
     readonly type: EnvelopeType;
@@ -124,7 +145,7 @@ export interface ResponseEnvelope extends BaseEnvelope {
     readonly status: "ok" | "error";
     readonly result?: Record<string, unknown>;
     readonly error?: {
-        readonly code: string;
+        readonly code: ErrorCode;
         readonly message: string;
         readonly retryable?: boolean;
     };
