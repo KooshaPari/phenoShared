@@ -102,6 +102,8 @@ class ReportGenerator:
             )
 
         for finding in findings:
+            start_line = max(1, finding.line)
+            start_column = max(1, finding.column + 1)
             sarif["runs"][0]["results"].append(
                 {
                     "ruleId": finding.rule_id,
@@ -112,8 +114,8 @@ class ReportGenerator:
                             "physicalLocation": {
                                 "artifactLocation": {"uri": finding.file},
                                 "region": {
-                                    "startLine": finding.line,
-                                    "startColumn": finding.column,
+                                    "startLine": start_line,
+                                    "startColumn": start_column,
                                 },
                             }
                         }
@@ -123,5 +125,3 @@ class ReportGenerator:
 
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(sarif, f, indent=2)
-
-

@@ -363,6 +363,10 @@ class TestReportGenerator:
             data = json.load(f)
         assert data["$schema"] == "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json"
         assert len(data["runs"][0]["results"]) == 3
+        for result in data["runs"][0]["results"]:
+            region = result["locations"][0]["physicalLocation"]["region"]
+            assert region["startLine"] >= 1
+            assert region["startColumn"] >= 1
 
 
 class TestIntegration:
