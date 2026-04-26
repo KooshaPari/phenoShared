@@ -1,5 +1,9 @@
 import { describe, it, expect } from "bun:test";
-import { HeliosAppError, ErrorCode } from "../src/index";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { HeliosAppError, ErrorCode, ERROR_CODES } from "../src/index";
+
+const contractRoot = join(import.meta.dir, "../../../contracts/errors");
 
 describe("HeliosAppError", () => {
   it("should create an error with code and message", () => {
@@ -30,5 +34,24 @@ describe("HeliosAppError", () => {
   it("should default fatal to false", () => {
     const error = new HeliosAppError(ErrorCode.TIMEOUT, "timed out");
     expect(error.fatal).toBe(false);
+  });
+
+  it("should expose the same code order as the shared contract", () => {
+    const codes = JSON.parse(readFileSync(join(contractRoot, "error-codes.json"), "utf8"));
+    expect(ERROR_CODES).toEqual(codes);
+  });
+
+  it("should serialize to the shared validation fixture", () => {
+    const error = new HeliosAppError(ErrorCode.VALIDATION_ERROR, "Invalid lane name", {
+      details: { field: "lane.name" },
+      retryable: false,
+    });
+    const fixture = JSON.parse(
+      readFileSync(join(contractRoot, "fixtures/validation-error.json"), "utf8"),
+    );
+    expect(error.toJSON()).toEqual({
+      ...fixture,
+      fatal: false,
+    });
   });
 });

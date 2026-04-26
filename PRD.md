@@ -219,7 +219,7 @@ Acceptance criteria:
 
 ### E8: TypeScript Shared Packages
 
-**E8.1: Typed Error Library (`@helios/errors`)**
+**E8.1: Typed Error Library (`@phenotype/errors`)**
 As a TypeScript service author, I need canonical `ErrorCode` enums and `HeliosAppError` class so that error handling is consistent across all TypeScript services.
 
 Acceptance criteria:
