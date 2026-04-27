@@ -9,6 +9,11 @@ permissions:
 on:
   workflow_call:
     inputs:
+      language:
+        description: 'Compatibility input for older callers; Rust is the only supported CI language.'
+        type: string
+        required: false
+        default: 'rust'
       rust-versions:
         description: 'JSON array of Rust toolchain versions for matrix (e.g. ["stable","1.70"])'
         type: string
