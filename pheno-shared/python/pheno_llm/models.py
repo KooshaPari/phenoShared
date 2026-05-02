@@ -5,6 +5,7 @@ from enum import StrEnum
 
 class Role(StrEnum):
     """Message role in a conversation."""
+
     SYSTEM = "system"
     USER = "user"
     ASSISTANT = "assistant"
@@ -13,6 +14,7 @@ class Role(StrEnum):
 
 class Provider(StrEnum):
     """Supported LLM providers."""
+
     OPENAI = "openai"
     ANTHROPIC = "anthropic"
     OLLAMA = "ollama"
@@ -25,6 +27,7 @@ class Provider(StrEnum):
 
 class Message:
     """A single message in a conversation."""
+
     role: Role
     content: str
     name: str | None = None
@@ -55,11 +58,17 @@ class Message:
 
 class ToolCall:
     """A tool call made by the model."""
+
     id: str
     type: str
     function: dict
 
-    def __init__(self, call_id: str, call_type: str = "function", function: dict | None = None) -> None:
+    def __init__(
+        self,
+        call_id: str,
+        call_type: str = "function",
+        function: dict | None = None,
+    ) -> None:
         """Initialize a tool call with id, type, and function."""
         self.id = call_id
         self.type = call_type
@@ -72,6 +81,7 @@ class ToolCall:
 
 class ToolDefinition:
     """Definition of a tool the model can call."""
+
     name: str
     description: str
     parameters: dict
@@ -96,6 +106,7 @@ class ToolDefinition:
 
 class Usage:
     """Token usage statistics."""
+
     prompt_tokens: int
     completion_tokens: int
     total_tokens: int
@@ -122,6 +133,7 @@ class Usage:
 
 class Response:
     """LLM response."""
+
     content: str | None
     tool_calls: list[ToolCall] | None
     tool_call_id: str | None
@@ -177,6 +189,7 @@ class Response:
 
 class CompletionRequest:
     """Request for text completion."""
+
     messages: list[Message]
     model: str
     provider: Provider | str
@@ -193,7 +206,7 @@ class CompletionRequest:
         temperature: float = 1.0,
         max_tokens: int | None = None,
         tools: list[ToolDefinition] | None = None,
-        stream: bool = False,  # noqa: FBT001,FBT002
+        stream: bool = False,
     ) -> None:
         """Initialize a completion request."""
         self.messages = messages
@@ -204,12 +217,17 @@ class CompletionRequest:
         self.tools = tools
         self.stream = stream
 
+    def _provider_value(self) -> str:
+        """Get provider value as string."""
+        prov = self.provider
+        return prov.value if isinstance(prov, Provider) else prov
+
     def to_dict(self) -> dict:
         """Convert completion request to dictionary."""
         result = {
             "messages": [m.to_dict() for m in self.messages],
             "model": self.model,
-            "provider": self.provider.value if isinstance(self.provider, Provider) else self.provider,
+            "provider": self._provider_value(),
             "temperature": self.temperature,
             "stream": self.stream,
         }
@@ -222,6 +240,7 @@ class CompletionRequest:
 
 class EmbeddingRequest:
     """Request for embeddings."""
+
     input: str | list[str]
     model: str
     provider: Provider | str
@@ -237,10 +256,15 @@ class EmbeddingRequest:
         self.model = model
         self.provider = Provider(provider) if isinstance(provider, str) else provider
 
+    def _provider_value(self) -> str:
+        """Get provider value as string."""
+        prov = self.provider
+        return prov.value if isinstance(prov, Provider) else prov
+
     def to_dict(self) -> dict:
         """Convert embedding request to dictionary."""
         return {
             "input": self.input,
             "model": self.model,
-            "provider": self.provider.value if isinstance(self.provider, Provider) else self.provider,
+            "provider": self._provider_value(),
         }
