@@ -15,8 +15,7 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
-import subprocess
+import subprocess  # noqa: S404
 import sys
 from pathlib import Path
 from typing import Any
@@ -50,7 +49,7 @@ def run_scan(
     repo_root: Path,
     policy: Path | None = None,
     fail_on_severity: str = "high",
-    report_only: bool = False,
+    report_only: bool = False,  # noqa: FBT001,FBT002
     output_json: Path | None = None,
     output_md: Path | None = None,
 ) -> dict[str, Any]:
@@ -81,7 +80,7 @@ def run_scan(
     if output_md:
         cmd.extend(["--output-md", str(output_md)])
 
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    result = subprocess.run(cmd, check=True, capture_output=True, text=True)
 
     # Parse JSON output if available
     findings: dict[str, Any] = {
@@ -92,7 +91,7 @@ def run_scan(
 
     if output_json and output_json.exists():
         try:
-            with open(output_json) as f:
+            with Path(output_json).open(encoding="utf-8") as f:
                 findings["data"] = json.load(f)
         except json.JSONDecodeError:
             pass
@@ -102,9 +101,11 @@ def run_scan(
 
 def format_summary(findings: dict[str, Any]) -> str:
     """Format scan results for CLI output."""
-    lines = ["╔══════════════════════════════════════════════════════════════════╗"]
-    lines.append("║  Legacy Tooling Enforcement - Scan Results                        ║")
-    lines.append("╚══════════════════════════════════════════════════════════════════╝")
+    lines = [
+        "╔══════════════════════════════════════════════════════════════════╗",
+        "║  Legacy Tooling Enforcement - Scan Results                        ║",
+        "╚══════════════════════════════════════════════════════════════════╝",
+    ]
 
     data = findings.get("data", {})
     totals = data.get("totals", {})
