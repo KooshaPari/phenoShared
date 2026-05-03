@@ -61,25 +61,25 @@ jobs:
 
       - name: Initialize CodeQL (v3)
         if: inputs.codeql-version == 'v3'
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@0daab03d71ff584ef619d027a3fd9146679c5d84
         with:
           languages: ${{ matrix.language }}
           queries: ${{ inputs.queries }}
 
       - name: Initialize CodeQL (v4)
         if: inputs.codeql-version == 'v4'
-        uses: github/codeql-action/init@v4
+        uses: github/codeql-action/init@e46ed2cbd01164d986452f91f178727624ae40d7
         with:
           languages: ${{ matrix.language }}
           queries: ${{ inputs.queries }}
 
       - name: Autobuild (v3)
         if: inputs.build-mode == 'autobuild' && inputs.codeql-version == 'v3'
-        uses: github/codeql-action/autobuild@v3
+        uses: github/codeql-action/autobuild@0daab03d71ff584ef619d027a3fd9146679c5d84
 
       - name: Autobuild (v4)
         if: inputs.build-mode == 'autobuild' && inputs.codeql-version == 'v4'
-        uses: github/codeql-action/autobuild@v4
+        uses: github/codeql-action/autobuild@e46ed2cbd01164d986452f91f178727624ae40d7
 
       - name: Manual build
         if: inputs.build-mode == 'manual' && inputs.build-command != ''
@@ -88,12 +88,12 @@ jobs:
 
       - name: Perform CodeQL Analysis (v3)
         if: inputs.codeql-version == 'v3'
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@0daab03d71ff584ef619d027a3fd9146679c5d84
         with:
           category: "/language:${{ matrix.language }}"
 
       - name: Perform CodeQL Analysis (v4)
         if: inputs.codeql-version == 'v4'
-        uses: github/codeql-action/analyze@v4
+        uses: github/codeql-action/analyze@e46ed2cbd01164d986452f91f178727624ae40d7
         with:
           category: "/language:${{ matrix.language }}"
