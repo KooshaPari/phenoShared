@@ -22,6 +22,11 @@ on:
         required: false
         type: string
         default: '.vitepress/dist'
+      custom_domain:
+        description: 'Set to "true" for custom domain deployments (no repo path prefix)'
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -37,7 +42,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.1.1
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.1.1
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
@@ -51,9 +56,12 @@ jobs:
 
       - name: Build VitePress site
         working-directory: ${{ inputs.docs_dir }}
-        run: bun run ${{ inputs.build_script }}
-        env:
-          GITHUB_PAGES: "true"
+        run: |
+          if [ "${{ inputs.custom_domain }}" = "true" ]; then
+            GITHUB_PAGES=true PHENOTYPE_CUSTOM_DOMAIN=true bun run ${{ inputs.build_script }}
+          else
+            GITHUB_PAGES=true bun run ${{ inputs.build_script }}
+          fi
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b
