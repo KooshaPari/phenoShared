@@ -6,10 +6,6 @@
   "types": "dist/index.d.ts",
   "files": [
     "dist"
-  ],
-  "engines": {
-    "node": ">=18",
-    "bun": ">=1.0"
-  }
+  ]
 }
 

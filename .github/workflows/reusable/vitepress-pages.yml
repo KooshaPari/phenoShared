@@ -12,6 +12,11 @@ on:
         description: 'Concurrency group name (must be unique per repo to avoid collisions)'
         required: true
         type: string
+      custom_domain:
+        description: 'Set to "true" for custom domain deployments (uses root base path instead of repo prefix)'
+        required: false
+        type: string
+        default: ''
       docs_dir:
         description: 'Working directory containing the VitePress site'
         required: false
@@ -54,7 +59,16 @@ jobs:
         working-directory: ${{ inputs.docs_dir }}
         run: bun install
 
+      - name: Build VitePress site (custom domain)
+        if: inputs.custom_domain == 'true'
+        working-directory: ${{ inputs.docs_dir }}
+        run: bun run ${{ inputs.build_script }}
+        env:
+          GITHUB_PAGES: "true"
+          PHENOTYPE_CUSTOM_DOMAIN: "true"
+
       - name: Build VitePress site
+        if: inputs.custom_domain != 'true'
         working-directory: ${{ inputs.docs_dir }}
         run: bun run ${{ inputs.build_script }}
         env:
