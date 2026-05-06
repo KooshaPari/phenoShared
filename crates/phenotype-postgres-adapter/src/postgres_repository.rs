@@ -8,6 +8,46 @@ use tokio_postgres::NoTls;
 use crate::error::PostgresError;
 use crate::postgres_config::PostgresConfig;
 
+/// Validates that a table name is safe for use in SQL statements.
+/// Only allows lowercase ASCII letters, digits, and underscores.
+/// Returns the name if valid, or an error if it contains dangerous characters.
+fn validate_table_name(name: &str) -> Result<&str, PostgresError> {
+    if name.is_empty() || name.len() > 63 {
+        return Err(PostgresError::Query(format!(
+            "Invalid table name '{}': length must be 1-63",
+            name
+        )));
+    }
+    if !name
+        .chars()
+        .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_')
+    {
+        return Err(PostgresError::Query(format!(
+            "Invalid table name '{}': must contain only lowercase letters, digits, and underscores",
+            name
+        )));
+    }
+    // Must not start with a digit
+    if name.chars().next().map_or(false, |c| c.is_ascii_digit()) {
+        return Err(PostgresError::Query(format!(
+            "Invalid table name '{}': must not start with a digit",
+            name
+        )));
+    }
+    // Reserved words
+    let reserved = [
+        "select", "insert", "update", "delete", "drop", "create", "alter",
+        "table", "from", "where", "union", "order", "group", "having",
+    ];
+    if reserved.contains(&name) {
+        return Err(PostgresError::Query(format!(
+            "Invalid table name '{}': reserved SQL keyword",
+            name
+        )));
+    }
+    Ok(name)
+}
+
 /// PostgreSQL repository for storing entities.
 #[derive(Clone)]
 pub struct PostgresRepository {
@@ -24,12 +64,14 @@ impl PostgresRepository {
         }
     }
 
-    /// Create with a custom table name.
-    pub fn with_table(pool: Pool, table_name: impl Into<String>) -> Self {
-        Self {
+    /// Create with a custom table name. Name is validated for safety.
+    pub fn with_table(pool: Pool, table_name: impl Into<String>) -> Result<Self, PostgresError> {
+        let name = table_name.into();
+        validate_table_name(&name)?;
+        Ok(Self {
             pool,
-            table_name: table_name.into(),
-        }
+            table_name: name,
+        })
     }
 
     /// Create a connection pool from config.
